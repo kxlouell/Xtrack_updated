@@ -5,7 +5,7 @@
     android:id="@+id/container"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#1e212d">
+    android:background="@color/black">
 
     <include
         layout="@layout/custom_actionbar"
@@ -36,7 +36,7 @@
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
         app:cnb_menuResource="@menu/bottom_nav_menu"
-        android:background="#1e212d"/>
+        android:background="@color/black"/>
 
 
 

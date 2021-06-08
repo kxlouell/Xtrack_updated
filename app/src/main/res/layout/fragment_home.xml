@@ -1,35 +1,71 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".ui.home.HomeFragment"
-    android:background="#1e212d">
+    android:background="@color/black">
+
     <include
+        android:id="@+id/include3"
         layout="@layout/custom_actionbar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentStart="true"
         android:layout_alignParentTop="true"
         android:layout_alignParentEnd="true"
-        android:layout_marginStart="1dp"
-        android:layout_marginTop="3dp"
-        android:layout_marginEnd="0dp" />
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
 
 
     <pl.droidsonroids.gif.GifImageView
         android:id="@+id/button1"
-        android:layout_width="410dp"
-        android:layout_height="540dp"
-        android:layout_above="@id/bottom_navigation"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/include3"
         android:layout_alignParentStart="true"
-        android:layout_alignParentTop="true"
+        android:layout_alignParentRight="true"
+        android:layout_marginTop="116dp"
+        android:src="@drawable/start"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/include3"/>
+
+    <TextView
+        android:id="@+id/connectionStatus"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintBottom_toTopOf="@+id/button1"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/include3"
+        android:text="Connection Status"
+        android:textColor="@color/grey"/>
+
+    <com.kusu.loadingbutton.LoadingButton
+        android:id="@+id/loadingButton"
+        android:layout_width="200dp"
+        android:layout_height="51dp"
+        android:layout_below="@+id/button1"
+        android:layout_alignParentStart="true"
         android:layout_alignParentEnd="true"
-        android:layout_centerInParent="true"
-        android:layout_marginStart="-1dp"
-        android:layout_marginTop="68dp"
-        android:layout_marginEnd="2dp"
-        android:layout_marginBottom="4dp"
-        android:src="@drawable/start" />
-</RelativeLayout>
+        android:layout_alignParentBottom="true"
+        android:layout_marginTop="10dp"
+        android:paddingLeft="10dp"
+        android:paddingRight="10dp"
+        android:text=""
+        android:textColor="@android:color/black"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.497"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/button1"
+        app:layout_constraintVertical_bias="0.055"
+        app:lb_buttonColor="@color/orange"
+        app:lb_isCircular="true"
+        app:lb_isShadowEnable="true"
+        app:lb_loaderColor="#faf3e0"
+        app:lb_shadowColor="@color/grey"
+        app:lb_shadowHeight="5dp" />
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".ui.devices.DevicesFragment"
-    android:background="#1e212d">
+    android:background="@color/black">
     <include
         layout="@layout/custom_actionbar"
         android:layout_width="match_parent"

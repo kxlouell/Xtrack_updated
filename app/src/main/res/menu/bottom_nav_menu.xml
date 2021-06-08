@@ -6,27 +6,27 @@
         android:id="@+id/navigation_home"
         android:icon="@drawable/pinpoint"
         android:title="@string/title_home"
-        app:cnb_backgroundColor="#b68973"
-        app:cnb_iconColor="#faf3e0"
-        app:cnb_textColor="#faf3e0"
+        app:cnb_backgroundColor="#ffa31a"
+        app:cnb_iconColor="#1b1b1b"
+        app:cnb_textColor="#1b1b1b"
         />
 
     <item
         android:id="@+id/navigation_devices"
         android:icon="@drawable/phone"
         android:title="@string/title_dashboard"
-        app:cnb_backgroundColor="#b68973"
-        app:cnb_iconColor="#faf3e0"
-        app:cnb_textColor="#faf3e0"
+        app:cnb_backgroundColor="#ffa31a"
+        app:cnb_iconColor="#1b1b1b"
+        app:cnb_textColor="#1b1b1b"
        />
 
     <item
         android:id="@+id/navigation_settings"
         android:icon="@drawable/settings"
         android:title="@string/title_notifications"
-        app:cnb_backgroundColor="#b68973"
-        app:cnb_iconColor="#faf3e0"
-        app:cnb_textColor="#faf3e0"
+        app:cnb_backgroundColor="#ffa31a"
+        app:cnb_iconColor="#1b1b1b"
+        app:cnb_textColor="#1b1b1b"
         />
 
 </menu>
