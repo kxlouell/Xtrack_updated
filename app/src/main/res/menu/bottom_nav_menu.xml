@@ -22,8 +22,8 @@
 
     <item
         android:id="@+id/navigation_settings"
-        android:icon="@drawable/settings"
-        android:title="@string/title_notifications"
+        android:icon="@drawable/ic_about"
+        android:title="About"
         app:cnb_backgroundColor="#ffa31a"
         app:cnb_iconColor="#1b1b1b"
         app:cnb_textColor="#1b1b1b"

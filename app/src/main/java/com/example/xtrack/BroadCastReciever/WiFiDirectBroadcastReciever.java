@@ -8,6 +8,9 @@ import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.wifi.p2p.WifiP2pManager;
+import android.os.Build;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
 import android.widget.Toast;
 
 import androidx.core.app.ActivityCompat;
@@ -46,7 +49,6 @@ public class WiFiDirectBroadcastReciever extends BroadcastReceiver {
 
         } else if (WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION.equals(action)) {
             //do something
-            Toast.makeText(context, "p2p peer changed action", Toast.LENGTH_SHORT).show();
             if (mManager != null) {
                 if (ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                     trackingPhase.requestPermissions();
@@ -66,8 +68,24 @@ public class WiFiDirectBroadcastReciever extends BroadcastReceiver {
             NetworkInfo networkInfo = intent.getParcelableExtra(WifiP2pManager.EXTRA_NETWORK_INFO);
             if (networkInfo.isConnected()) {
                 mManager.requestConnectionInfo(mChannel, trackingPhase.connectionInfoListener);
+                Vibrator v = (Vibrator) trackingPhase.getSystemService(Context.VIBRATOR_SERVICE);
+// Vibrate for 500 milliseconds
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    v.vibrate(VibrationEffect.createOneShot(2000, VibrationEffect.DEFAULT_AMPLITUDE));
+                } else {
+                    //deprecated in API 26
+                    v.vibrate(2000);
+                }
             }else {
                 trackingPhase.connectionStatus.setText("Device Disconnected!");
+                Vibrator v = (Vibrator) trackingPhase.getSystemService(Context.VIBRATOR_SERVICE);
+// Vibrate for 500 milliseconds
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    v.vibrate(VibrationEffect.createOneShot(2000, VibrationEffect.DEFAULT_AMPLITUDE));
+                } else {
+                    //deprecated in API 26
+                    v.vibrate(2000);
+                }
             }
 
 

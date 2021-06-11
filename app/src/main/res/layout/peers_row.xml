@@ -8,13 +8,14 @@
         android:id="@+id/peerImage"
         android:layout_width="180px"
         android:layout_height="180px"
-        android:src="@drawable/a1"/>
+        android:src="@drawable/ic_unknown_user"/>
     <TextView
         android:id="@+id/peerText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="GG"
         android:fontFamily="@font/rubik_bold"
+        android:textColor="@color/coolgrey"
         android:layout_gravity="center"/>
 
 

@@ -13,6 +13,7 @@ import com.mapbox.mapboxsdk.plugins.annotation.SymbolOptions;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -21,43 +22,40 @@ import java.util.List;
 import java.util.Map;
 
 public class ServerInit extends Thread {
-    Socket socket;
+    Socket socket = null;
     ServerSocket serverSocket;
     public SendRecieve sendRecieve;
     trackingphase trackingphase;
-    Handler handler, threadHandler;
+    Handler threadHandler;
     WifiP2pDeviceList devices;
-    WifiP2pDevice device;
     List<SendRecieve> devicesSR;
     public static ArrayList<InetAddress> clients;
-    public static Map<String,Socket> clientSockets;
 
     public ServerInit(trackingphase trackingPhase, Handler handler, Handler threadHandler){
         devicesSR = new ArrayList<SendRecieve>();
         devices = new WifiP2pDeviceList();
         this.trackingphase = trackingPhase;
-        this.handler = handler;
         this.threadHandler = threadHandler;
         clients = new ArrayList<InetAddress>();
-        clientSockets = new HashMap<String,Socket>();
     }
 
 
     @Override
     public void run() {
         clients.clear();
-        clientSockets.clear();
-
+        devicesSR.clear();
         try {
-            serverSocket = new ServerSocket(8888);
+            serverSocket = new ServerSocket(); // <-- create an unbound socket first
+            serverSocket.setReuseAddress(true);
+            serverSocket.bind(new InetSocketAddress(8888));
             while(true) {
                 socket = serverSocket.accept();
-                if(socket.isConnected()){
-                    sendRecieve = new SendRecieve(socket, trackingphase, threadHandler);
-                    sendRecieve.setName("SRThread as Server: "+socket.getInetAddress());
-                    sendRecieve.start();
-                    devicesSR.add(sendRecieve);
-                }
+                sendRecieve = new SendRecieve(socket, trackingphase, threadHandler);
+                sendRecieve.setName("SRThread as Server: "+socket.getInetAddress());
+                sendRecieve.start();
+                devicesSR.add(sendRecieve);
+                clients.add(socket.getInetAddress());
+                System.out.println(Thread.currentThread()+" DevicesSR size: "+devicesSR.size());
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -65,12 +63,13 @@ public class ServerInit extends Thread {
 
     }
 
-    public Socket getSocket() {
-        return socket;
+    @Override
+    public void interrupt() {
+        super.interrupt();
     }
 
-    public ServerSocket getServerSocket() {
-        return serverSocket;
+    public static ArrayList<InetAddress> getClients() {
+        return clients;
     }
 
     public List<SendRecieve> getDevicesSR() {

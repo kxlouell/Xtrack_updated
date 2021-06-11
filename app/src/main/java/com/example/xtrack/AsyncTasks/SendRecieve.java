@@ -9,14 +9,14 @@ import android.os.Message;
 
 import androidx.annotation.NonNull;
 
+import com.example.xtrack.trackingphase;
+
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
-
-import com.example.xtrack.trackingphase;
 
 public class SendRecieve extends HandlerThread {
     private static Socket socket;
@@ -35,6 +35,11 @@ public class SendRecieve extends HandlerThread {
 
     }
 
+    @Override
+    public void interrupt() {
+        super.interrupt();
+
+    }
 
     @SuppressLint("HandlerLeak")
     @Override
@@ -51,13 +56,12 @@ public class SendRecieve extends HandlerThread {
                         break;
                     case 1:
                         Bundle bb = (Bundle) msg.obj;
-                        System.out.println(msg);
-                        System.out.println(msg.getData());
-                        System.out.println("Handler = lat: "+bb.getDouble("lat")+" | lon: "+bb.getDouble("lon"));
+                        System.out.println(Thread.currentThread()+" "+msg);
+                        System.out.println(Thread.currentThread()+" "+msg.getData());
+                        System.out.println(Thread.currentThread()+" "+"Handler = lat: "+bb.getDouble("lat")+" | lon: "+bb.getDouble("lon"));
                         sendTask sTask = new sendTask(trackingPhase,SendRecieve.this, bb);
                         sTask.execute();
                         break;
-
                 }
             }
         };
@@ -68,41 +72,43 @@ public class SendRecieve extends HandlerThread {
     @Override
     public void run() {
         onLooperPrepared();
-        System.out.println("Done Looper Prepared");
+        System.out.println(Thread.currentThread()+" "+"Done Looper Prepared");
         try {
             inputStream = socket.getInputStream();
             dataInputStream = new DataInputStream(inputStream);
         } catch (IOException e) {
             e.printStackTrace();
+            trackingPhase.disconnect();
         }
         while (socket != null) {
             if (socket.isConnected()) {
-                System.out.println("Socket is Connected!");
+                System.out.println(Thread.currentThread()+" "+"Socket is Connected!");
                 try {
                     boolean done = false;
-                    System.out.println("DataInputStream Success!");
+                    System.out.println(Thread.currentThread()+" "+"DataInputStream Success!");
                     while (!done) {
                         if (inputStream.available() > 0) {
-                            System.out.println("Is Available");
+                            System.out.println(Thread.currentThread()+" "+"Is Available");
                             byte messageType = dataInputStream.readByte();
-                            System.out.println(messageType);
+                            System.out.println(Thread.currentThread()+" "+"MessageType"+messageType);
                             switch (messageType) {
                                 case 0:
+                                    System.out.println(Thread.currentThread()+" "+"Is Byte 0");
                                     Bundle bb = new Bundle();
                                     bb.putInt("Avatar", dataInputStream.readInt());
-                                    //bb.putI
-                                    //handler.obtainMessage(trackingPhase.INITAVATAR, avatar).sendToTarget();
-                                    threadHandler.obtainMessage(trackingPhase.mTOAST, 1, -1, "Message Recieved" + dataInputStream.readUTF()).sendToTarget();
+                                    bb.putString("Inet",socket.getInetAddress().toString());
+                                    threadHandler.obtainMessage(trackingPhase.INITAVATAR, bb).sendToTarget();
                                     break;
                                 case 1:
-                                    System.out.println("Is Case 1");
+                                    System.out.println(Thread.currentThread()+" "+"Is Byte 1");
                                     double lat = dataInputStream.readDouble();
                                     double lon = dataInputStream.readDouble();
-                                    System.out.println("lat is " + lat);
-                                    System.out.println("lon is " + lon);
+                                    System.out.println(Thread.currentThread()+" "+"lat is " + lat);
+                                    System.out.println(Thread.currentThread()+" "+"lon is " + lon);
                                     Bundle locationBundle = new Bundle();
                                     locationBundle.putDouble("lat", lat);
                                     locationBundle.putDouble("lon", lon);
+                                    locationBundle.putString("Inet",socket.getInetAddress().toString());
                                     threadHandler.obtainMessage(trackingPhase.PLOTLOCATION,locationBundle).sendToTarget();
                                     break;
                                 default:
@@ -113,6 +119,7 @@ public class SendRecieve extends HandlerThread {
 
                 } catch (IOException e) {
                     e.printStackTrace();
+                    trackingPhase.disconnect();
                 }
             }
         }
@@ -120,7 +127,6 @@ public class SendRecieve extends HandlerThread {
 
 
     public void sendLatlong(double lat, double lon){
-        threadHandler.obtainMessage(trackingPhase.mTOAST, 1, -1, "New location to be send on SendRecieve!").sendToTarget();
         try {
             outputStream = socket.getOutputStream();
             dataOutputStream = new DataOutputStream(outputStream);
@@ -130,9 +136,10 @@ public class SendRecieve extends HandlerThread {
             dataOutputStream.flush();
             dataOutputStream.writeByte(-1);
             dataOutputStream.flush();
-            System.out.println("Data Sent!");
+            System.out.println(Thread.currentThread()+" "+"Data Sent!");
         } catch (IOException e) {
             e.printStackTrace();
+            trackingPhase.disconnect();
         }
     }
 
@@ -143,11 +150,16 @@ public class SendRecieve extends HandlerThread {
             dataOutputStream.writeByte(0);
             dataOutputStream.writeInt(avatar);
             dataOutputStream.flush();
-            System.out.println("initAvatar Sent!");
+            System.out.println(Thread.currentThread()+" initAvatar Sent!");
         }catch (IOException e){
             e.printStackTrace();
+            trackingPhase.disconnect();
         }
 
+    }
+
+    public Socket getSocket() {
+        return socket;
     }
 
     public Handler getHandler() {

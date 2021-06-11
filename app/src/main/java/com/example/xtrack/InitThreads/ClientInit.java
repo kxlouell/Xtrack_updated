@@ -10,6 +10,7 @@ import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 
 import android.os.Handler;
 
@@ -18,27 +19,43 @@ public class ClientInit extends Thread {
     String hostAdd;
     public SendRecieve sendRecieve;
     trackingphase trackingPhase;
-    Handler handler,threadHandler;
-
+    Handler threadHandler;
+    int count = 0;
 
     public ClientInit(InetAddress hostAddress, trackingphase trackingPhase, Handler handler, Handler threadHandler) {
         this.threadHandler = threadHandler;
         hostAdd = hostAddress.getHostAddress();
-        socket = new Socket();
         this.trackingPhase = trackingPhase;
-        this.handler = handler;
     }
 
 
     @Override
+    public void interrupt() {
+        super.interrupt();
+        sendRecieve.interrupt();
+        try {
+            socket.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Override
     public void run() {
         try {
-            socket.connect(new InetSocketAddress(hostAdd, 8888), 500);
+            socket = new Socket();
+            socket.connect(new InetSocketAddress(hostAdd, 8888), 1000);
             sendRecieve = new SendRecieve(socket,trackingPhase,threadHandler);
             sendRecieve.setName("SRThread as Client");
             sendRecieve.start();
         } catch (IOException e) {
             e.printStackTrace();
+            if(count<5) {
+                count++;
+                this.run();
+            }else{
+                trackingPhase.disconnect();
+            }
         }
     }
 

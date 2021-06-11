@@ -246,8 +246,6 @@ public class MainActivity extends AppCompatActivity implements HomeFragment.home
 
         mCManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
 
-        bottomNav = findViewById(R.id.bottom_navigation);
-
         homeFragment = new HomeFragment(MainActivity.this, wifiManager);
     }
 
@@ -255,11 +253,6 @@ public class MainActivity extends AppCompatActivity implements HomeFragment.home
     @Override
     protected void onResume() {
         super.onResume();
-        if(getPackageManager().hasSystemFeature(PackageManager.FEATURE_WIFI_RTT)){
-            Toast.makeText(this, Build.MANUFACTURER+" "+ Build.MODEL + " " + Build.VERSION.RELEASE+":" +"This Device Supports RTT", Toast.LENGTH_LONG).show();
-        }else{
-            Toast.makeText(this, Build.MANUFACTURER+" "+ Build.MODEL + " " + Build.VERSION.RELEASE+":" +"This Device doesn't support RTT", Toast.LENGTH_SHORT).show();
-        }
 
     }
 

@@ -18,7 +18,6 @@ import android.net.wifi.p2p.WifiP2pDeviceList;
 import android.net.wifi.p2p.WifiP2pGroup;
 import android.net.wifi.p2p.WifiP2pInfo;
 import android.net.wifi.p2p.WifiP2pManager;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -32,6 +31,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
@@ -39,6 +39,8 @@ import androidx.core.content.ContextCompat;
 
 import com.example.xtrack.Adapters.peerListAdapter;
 import com.example.xtrack.AsyncTasks.SendRecieve;
+import com.example.xtrack.AsyncTasks.plotTaskClient;
+import com.example.xtrack.AsyncTasks.plotTaskServer;
 import com.example.xtrack.BroadCastReciever.WiFiDirectBroadcastReciever;
 import com.example.xtrack.InitThreads.ClientInit;
 import com.example.xtrack.InitThreads.ServerInit;
@@ -140,6 +142,7 @@ public class trackingphase extends AppCompatActivity implements
     ClientInit clientInit;
     SendRecieve sendRecieve;
 
+    double lastLat = 0,lastlon=0;
     List<WifiP2pDevice> peers = new ArrayList<WifiP2pDevice>();
     WifiP2pDevice[] deviceArray;
 
@@ -148,10 +151,7 @@ public class trackingphase extends AppCompatActivity implements
     private static final String LAYER_ID = "LAYER_ID";
     FloatingActionButton centerLoc;
     SymbolManager symbolManager;
-    Symbol symbol;
-    Layer symboLayer;
-    Map<String, String> macIP = new HashMap<>();
-    Map<String, InetAddress> deviceIP = new HashMap<>();
+    Map<String, Symbol> symbolIP = new HashMap<>();
 
     public static final int INITAVATAR = 1;
     public static final int mTOAST = 2;
@@ -179,27 +179,32 @@ public class trackingphase extends AppCompatActivity implements
         public void handleMessage(@NonNull Message msg) {
             switch (msg.what){
                 case INITAVATAR:
-
+                    System.out.println("Handler Case AvatarInit");
+                    Bundle bb = (Bundle) msg.obj;
+                    System.out.println("threadHandler: "+bb);
+                    style.addImage(bb.getString("Inet"),BitmapFactory.decodeResource(
+                            trackingphase.this.getResources(), bb.getInt("Avatar")));
+                    SymbolOptions symbolOptions = new SymbolOptions()
+                            .withLatLng(new LatLng(0,0))
+                            .withIconImage(bb.getString("Inet"))
+                            .withIconSize(0.1f)
+                            .withSymbolSortKey(2f)
+                            .withDraggable(false)
+                            .withTextAnchor("Dowps");
+                    symbolIP.put(bb.getString("Inet"),symbolManager.create(symbolOptions));
+                    System.out.println("threadHandler: "+symbolIP);
                     break;
                 case mTOAST:
                     Toast.makeText(trackingphase.this, msg.obj.toString(), Toast.LENGTH_SHORT).show();
                     break;
                 case PLOTLOCATION:
                     Bundle locationBundle = (Bundle) msg.obj;
-                    double lat = locationBundle.getDouble("lat");
-                    double lon = locationBundle.getDouble("lon");
-                    Toast.makeText(trackingphase.this,"New Location: "+lat+" | "+lon,Toast.LENGTH_SHORT).show();
-                    if(symbol!=null){
-                        symbol.setLatLng(new LatLng(lat, lon));
-                        symbolManager.update(symbol);
-                    }else{
-                        SymbolOptions symbolOptions = new SymbolOptions()
-                                .withLatLng(new LatLng(lat,lon))
-                                .withIconImage("ID_ICON_A2")
-                                .withIconSize(0.3f)
-                                .withSymbolSortKey(2f)
-                                .withDraggable(true);
-                        symbol = symbolManager.create(symbolOptions);
+                    if(STATUS==0) {
+                        plotTaskServer ptaskServer = new plotTaskServer(trackingphase.this, serverInit.getDevicesSR(), locationBundle, symbolIP, symbolManager);
+                        ptaskServer.execute();
+                    }else if(STATUS==1){
+                        plotTaskClient plotTaskClient = new plotTaskClient(trackingphase.this, clientInit.sendRecieve, locationBundle, symbolIP, symbolManager);
+                        plotTaskClient.execute();
                     }
                     break;
             }
@@ -236,7 +241,9 @@ public class trackingphase extends AppCompatActivity implements
         mIntentFilter.addAction(WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION);
 
         peersListView = findViewById(R.id.peerList);
+
         centerLoc = (FloatingActionButton) findViewById(R.id.centerLoc);
+
     }
     public void exqListener(){
         btn.setOnClickListener(new View.OnClickListener() {
@@ -271,7 +278,6 @@ public class trackingphase extends AppCompatActivity implements
                         Toast.makeText(getApplicationContext(), "Connecting to" + device.deviceName, Toast.LENGTH_SHORT).show();
 
                     }
-
                     @Override
                     public void onFailure(int reason) {
                         Toast.makeText(getApplicationContext(), "Cant connect to "+device.deviceName, Toast.LENGTH_SHORT).show();
@@ -288,25 +294,8 @@ public class trackingphase extends AppCompatActivity implements
                 double lon = locationComponent.getLastKnownLocation().getLongitude();
                 CameraPosition cameraPosition = new CameraPosition.Builder()
                         .target(new LatLng(lat, lon))
-                        .zoom(12).build();
+                        .zoom(18).build();
                 mapboxMap.setCameraPosition(cameraPosition);
-                Bundle bb = new Bundle();
-                bb.putDouble("lat", lat);
-                bb.putDouble("lon", lon);
-                System.out.println("Centerloc = lat: "+bb.getDouble("lat")+" | lon: "+bb.getDouble("lon"));
-                if(STATUS==0) {
-                    System.out.println("ServerInit is"+serverInit);
-                    System.out.println("SendRecieve is"+serverInit.sendRecieve);
-                    System.out.println("Handler is"+serverInit.sendRecieve.handler);
-                    serverInit.sendRecieve.getHandler().obtainMessage(1,1,-1, bb).sendToTarget();
-
-                }else{
-                    System.out.println("ServerInit is"+clientInit);
-                    System.out.println("SendRecieve is"+clientInit.sendRecieve);
-                    System.out.println("Handler is"+clientInit.sendRecieve.handler);
-                    clientInit.sendRecieve.getHandler().obtainMessage(1,bb).sendToTarget();
-                }
-
             }
         });
     }
@@ -315,11 +304,11 @@ public class trackingphase extends AppCompatActivity implements
     private void openmainactivity() {
         Intent intent = new Intent (getApplicationContext(), MainActivity.class);
         startActivity(intent);
+        finish();
     }
 
     public void discoverPeer(){
         if (ContextCompat.checkSelfPermission(trackingphase.this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-            Toast.makeText(trackingphase.this, "Permission Granted", Toast.LENGTH_SHORT).show();
         } else {
             requestPermissions();
         }
@@ -379,6 +368,11 @@ public class trackingphase extends AppCompatActivity implements
                             @Override
                             public void onSuccess() {
                                 Toast.makeText(getApplicationContext(),"Group Disconnect Success!", Toast.LENGTH_LONG).show();
+                                if(STATUS==0){
+                                    serverInit.interrupt();
+                                }else if(STATUS==1){
+                                    clientInit.interrupt();
+                                }
                             }
 
                             @Override
@@ -410,7 +404,6 @@ public class trackingphase extends AppCompatActivity implements
                 )),
                 new Style.OnStyleLoaded() {
                     @Override public void onStyleLoaded(@NonNull Style style) {
-                        Toast.makeText(trackingphase.this, "MapLoaded", Toast.LENGTH_SHORT).show();
                         enableLocationComponent(style);
                         trackingphase.this.style = style;
                         symbolManager = new SymbolManager(mapView, mapboxMap, style);
@@ -419,7 +412,7 @@ public class trackingphase extends AppCompatActivity implements
                         symbolManager.setIconTranslate(new Float[]{-4f, 5f});
 
                         style.addImage("ID_ICON_A2", BitmapFactory.decodeResource(
-                                trackingphase.this.getResources(), R.drawable.a1));
+                                trackingphase.this.getResources(), R.drawable.ic_unknown_user));
                     }
                  });
     }
@@ -536,33 +529,76 @@ public class trackingphase extends AppCompatActivity implements
                 // Pass the new location to the Maps SDK's LocationComponent
                 if (activity.mapboxMap != null && result.getLastLocation() != null) {
                     activity.mapboxMap.getLocationComponent().forceLocationUpdate(result.getLastLocation());
-                    if(trackingPhase.serverInit!=null&&trackingPhase.serverInit.getDevicesSR().size()>0 && trackingPhase.STATUS==0) {
-                        Bundle bb = new Bundle();
-                        bb.putDouble("lat", result.getLastLocation().getLatitude());
-                        bb.putDouble("lon", result.getLastLocation().getLongitude());
-                        for (SendRecieve sr : trackingPhase.serverInit.getDevicesSR()){
-                            if(trackingPhase.FIRST_RUN==0){
-                                SharedPreferences sprefs = trackingPhase.getSharedPreferences(trackingPhase.getString(R.string.AVATAR),trackingphase.MODE_PRIVATE);
-                                if(sprefs.getInt("ICON",0)!=0){
-                                    sr.getHandler().obtainMessage(0, sprefs.getInt("ICON",0)).toString();
-                                    trackingPhase.FIRST_RUN=1;
-                                    System.out.println("TrackingPhase "+trackingPhase.FIRST_RUN);
+                    double lastlat = trackingPhase.lastLat;
+                    double lastlon = trackingPhase.lastlon;
+                    double newlat = 0;
+                    double newlon = 0;
+                    if(lastlat>result.getLastLocation().getLatitude()){
+                        newlat = trackingPhase.lastLat - result.getLastLocation().getLatitude();
+                    }else{
+                        newlat = result.getLastLocation().getLatitude()-trackingPhase.lastLat;
+                    }
+                    if(lastlon>result.getLastLocation().getLongitude()){
+                        newlon = trackingPhase.lastlon - result.getLastLocation().getLongitude();
+                    }else{
+                        newlon = result.getLastLocation().getLongitude()-trackingPhase.lastlon;
+                    }
+
+                    System.out.println(Thread.currentThread()+"Range "+newlat+" "+newlon);
+                    if (Math.abs(newlat) >=  0.000001||Math.abs(newlon) >= 0.000001) {
+                        if (trackingPhase.serverInit != null && trackingPhase.serverInit.getDevicesSR().size() > 0 && trackingPhase.STATUS == 0) {
+                            System.out.println(Thread.currentThread() + " SendingLoc as Server!\n\n\n" + trackingPhase.FIRST_RUN);
+                            Bundle bb = new Bundle();
+                            bb.putDouble("lat", result.getLastLocation().getLatitude());
+                            bb.putDouble("lon", result.getLastLocation().getLongitude());
+                            System.out.println(Thread.currentThread() + " First Run is" + trackingPhase.FIRST_RUN);
+                            int count = 0;
+                            System.out.println("DevicesSR size: " + trackingPhase.serverInit.getDevicesSR().size());
+                            for (SendRecieve sr : trackingPhase.serverInit.getDevicesSR()) {
+                                if (trackingPhase.FIRST_RUN == 0) {
+                                    SharedPreferences sprefs = trackingPhase.getSharedPreferences(trackingPhase.getString(R.string.AVATAR), trackingphase.MODE_PRIVATE);
+                                    int icon = sprefs.getInt("ICON", 0);
+                                    System.out.println(Thread.currentThread() + " ICON ID is " + sprefs.getInt("ICON", 0));
+                                    if (icon != 0) {
+                                        sr.getHandler().obtainMessage(0, sprefs.getInt("ICON", 0)).sendToTarget();
+                                        System.out.println(Thread.currentThread() + " TrackingPhase " + trackingPhase.FIRST_RUN);
+                                    }
+                                    trackingPhase.FIRST_RUN = 1;
+                                } else {
+                                    sr.getHandler().obtainMessage(1, bb).sendToTarget();
+                                    System.out.println(Thread.currentThread() + " Sending Location!");
                                 }
-                            }else {
-                                sr.getHandler().obtainMessage(1, bb).sendToTarget();
-                                System.out.println("Sending Location!");
+                                count++;
+                            }
+                            System.out.println("Count is" + count);
+                        } else if (trackingPhase.clientInit != null && trackingPhase.clientInit.getSocket().isConnected() && trackingPhase.STATUS == 1) {
+                            System.out.println("SendingLoc as Client!\n\n\n");
+                            Bundle bb = new Bundle();
+                            bb.putDouble("lat", result.getLastLocation().getLatitude());
+                            bb.putDouble("lon", result.getLastLocation().getLongitude());
+                            System.out.println("First Run is" + trackingPhase.FIRST_RUN);
+                            if (trackingPhase.FIRST_RUN == 0) {
+                                SharedPreferences sprefs = trackingPhase.getSharedPreferences(trackingPhase.getString(R.string.AVATAR), trackingphase.MODE_PRIVATE);
+                                int icon = sprefs.getInt("ICON", 0);
+                                System.out.println("ICON ID is " + sprefs.getInt("ICON", 0));
+                                if (icon != 0) {
+                                    trackingPhase.clientInit.sendRecieve.getHandler().obtainMessage(0, sprefs.getInt("ICON", 0)).sendToTarget();
+                                    System.out.println("TrackingPhase " + trackingPhase.FIRST_RUN);
+                                } else {
+                                    System.out.println("Icon is null");
+                                }
+                                trackingPhase.FIRST_RUN = 1;
+                            } else {
+                                trackingPhase.clientInit.sendRecieve.getHandler().obtainMessage(1, bb).sendToTarget();
+                                System.out.println(Thread.currentThread() + " Sending Location!");
                             }
                         }
-
-                    }else if(trackingPhase.clientInit!=null&&trackingPhase.clientInit.getSocket().isConnected()&& trackingPhase.STATUS==1){
-                        Bundle bb = new Bundle();
-                        bb.putDouble("lat", result.getLastLocation().getLatitude());
-                        bb.putDouble("lon", result.getLastLocation().getLongitude());
-                        trackingPhase.clientInit.sendRecieve.getHandler().obtainMessage(2,bb).sendToTarget();
                     }
+                    trackingPhase.lastLat = result.getLastLocation().getLatitude();
+                    trackingPhase.lastlon = result.getLastLocation().getLongitude();
+                }
                 }
             }
-        }
 
         /**
          * The LocationEngineCallback interface's method which fires when the device's location can't be captured
@@ -638,7 +674,7 @@ public class trackingphase extends AppCompatActivity implements
                 for (WifiP2pDevice device : peerList.getDeviceList()) {
                     deviceNameArray[index] = device.deviceName;
                     deviceArray[index] = device;
-                    image[index] = R.drawable.a1;
+                    image[index] = R.drawable.ic_unknown_user;
                     index++;
                 }
                 peerListAdapter peerAdapter = new peerListAdapter(trackingphase.this,image, deviceNameArray);

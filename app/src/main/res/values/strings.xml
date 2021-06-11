@@ -8,4 +8,15 @@
     <string name="user_location_permission_not_granted"></string>
     <string name="new_location">New lat: %1$s New longitude: %2$s</string>
     <string name="AVATAR">AVATAR</string>
+    <string name="about1">
+        X-Track was developed by Computer Engineering Students of Technological Institute of the Philippines Quezon City Campus.
+        The main purpose of X-track is to provide an enhanced offline map with the ability to locate other mobile devices
+        in off-grid places by utilizing Mapping GPS technology and Wi-Fi Direct.
+    </string>
+    <string name="about2">
+        X-track is primarily designed for people who simply enjoy traveling in isolated places, such as hikers and trekkers,
+        in order to ensure their safety in the event of an emergency. X-track was created by implementing the MapBox API Offline Map and
+        adding some features such as location tracking which does not necessitate cellular network data or the internet,
+        as well as notifying connected devices when they became disconnected.
+    </string>
 </resources>

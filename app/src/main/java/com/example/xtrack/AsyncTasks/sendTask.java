@@ -24,7 +24,6 @@ public class sendTask extends AsyncTask<Void,Void,Void> {
 
     @Override
     protected void onPreExecute() {
-        Toast.makeText(trackingPhase, "PreExecute sendTask!="+bb.getDouble("lat")+" | "+bb.getDouble("lon"), Toast.LENGTH_SHORT).show();
     }
 
     @Override
