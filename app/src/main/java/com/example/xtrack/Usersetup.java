@@ -9,11 +9,14 @@ import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ImageButton;
 
 public class Usersetup extends AppCompatActivity {
 
     int ID;
+    String NAME;
+    EditText editText;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -31,6 +34,7 @@ public class Usersetup extends AppCompatActivity {
                         getString(R.string.AVATAR), Usersetup.this.MODE_PRIVATE);
                 SharedPreferences.Editor editor = sharedPref.edit();
                 editor.putInt("ICON",ID);
+                editor.putString("NAME", editText.getText().toString());
                 editor.apply();
                 openmainact();
             }
@@ -55,7 +59,10 @@ public class Usersetup extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == 0x11 && resultCode == 0x11) {
             ID = data.getExtras().getInt("image");
+            NAME = data.getExtras().getString("name");
             ImageButton imageView = (ImageButton) findViewById(R.id.avatar);
+            editText = (EditText) findViewById(R.id.edit_name);
+            editText.setText(NAME);
             imageView.setImageResource(ID);
         }
 

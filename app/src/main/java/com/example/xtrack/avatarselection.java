@@ -24,7 +24,7 @@ import java.util.Map;
 public class avatarselection  extends AppCompatActivity {
      String[] text = {"Jim","Mingurii","CryptoGong","Dowps","Yejiena"};
      int[] picture = new int[]{R.drawable.avatar_1, R.drawable.avatar_2, R.drawable.avatar_3, R.drawable.avatar_4,R.drawable.avatar_5};
-    GridView gridView;
+     GridView gridView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -40,6 +40,7 @@ public class avatarselection  extends AppCompatActivity {
                 Intent intent=getIntent();
                 Bundle bundle=new Bundle();
                 bundle.putInt("image",picture[position]);
+                bundle.putString("name", text[position]);
                 intent.putExtras(bundle);
                 setResult(0x11,intent);
                 finish();

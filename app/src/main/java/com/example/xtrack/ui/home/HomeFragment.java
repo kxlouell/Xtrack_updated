@@ -3,6 +3,7 @@ package com.example.xtrack.ui.home;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Bundle;
@@ -10,6 +11,7 @@ import android.provider.Settings;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageButton;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -20,7 +22,11 @@ import androidx.lifecycle.ViewModelProvider;
 
 import com.example.xtrack.MainActivity;
 import com.example.xtrack.R;
+import com.example.xtrack.Usersetup;
 import com.example.xtrack.trackingphase;
+import com.github.angads25.toggle.interfaces.OnToggledListener;
+import com.github.angads25.toggle.model.ToggleableView;
+import com.github.angads25.toggle.widget.LabeledSwitch;
 import com.kusu.loadingbutton.LoadingButton;
 
 import org.jetbrains.annotations.NotNull;
@@ -34,15 +40,19 @@ public class HomeFragment extends Fragment  {
     private homeFragmentListener listener;
     private GifImageView btn;
     LoadingButton btnOnOff;
+    ImageButton userPic;
     WifiManager wifiManager;
     trackingphase trackingPhase;
     MainActivity mActivity;
+    LabeledSwitch labeledSwitch;
+    SharedPreferences sharedPref;
+    SharedPreferences.Editor editor;
 
-    public TextView connectionStatus;
+    public TextView connectionStatus, username;
 
     public HomeFragment(MainActivity mActivity, WifiManager wifiManager){
-        this.wifiManager = wifiManager;
         this.mActivity = mActivity;
+        this.wifiManager = wifiManager;
     }
 
     public interface homeFragmentListener{
@@ -114,6 +124,11 @@ public class HomeFragment extends Fragment  {
             }
         });
 
+        labeledSwitch.setOnToggledListener(new OnToggledListener() {
+            @Override
+            public void onSwitched(ToggleableView toggleableView, boolean isOn) {
+            }
+        });
 
     }
 
@@ -121,7 +136,15 @@ public class HomeFragment extends Fragment  {
         btn =  view.findViewById(R.id.button1);
         connectionStatus = (TextView) view.findViewById(R.id.connectionStatus);
         btnOnOff = view.findViewById(R.id.loadingButton);
+        labeledSwitch = view.findViewById(R.id.Status_Switch);
+        userPic = view.findViewById(R.id.user_home);
+        username = view.findViewById(R.id.user_name);
+        sharedPref = mActivity.getSharedPreferences(
+                getString(R.string.AVATAR), mActivity.MODE_PRIVATE);
+        editor = sharedPref.edit();
 
+        userPic.setImageResource(sharedPref.getInt("ICON",0));
+        username.setText(sharedPref.getString("NAME",null));
         if (wifiManager.isWifiEnabled()) {
             btnOnOff.setText("OFF WIFI");
         } else {
@@ -130,6 +153,13 @@ public class HomeFragment extends Fragment  {
     }
 
     private void opentrackingphase() {
+        if(labeledSwitch.isOn()){
+            editor.putString("USERTYPE", labeledSwitch.getLabelOn());
+            editor.apply();
+        }else {
+            editor.putString("USERTYPE", labeledSwitch.getLabelOff());
+            editor.apply();
+        }
         trackingPhase = new trackingphase();
         Intent intent = new Intent(getContext(), trackingPhase.getClass());
         startActivity(intent);

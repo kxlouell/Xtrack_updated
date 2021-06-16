@@ -71,7 +71,7 @@ public class WiFiDirectBroadcastReciever extends BroadcastReceiver {
                 Vibrator v = (Vibrator) trackingPhase.getSystemService(Context.VIBRATOR_SERVICE);
 // Vibrate for 500 milliseconds
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    v.vibrate(VibrationEffect.createOneShot(2000, VibrationEffect.DEFAULT_AMPLITUDE));
+                    v.vibrate(VibrationEffect.createOneShot(2000, VibrationEffect.DEFAULT_AMPLITUDE ));
                 } else {
                     //deprecated in API 26
                     v.vibrate(2000);
@@ -87,8 +87,6 @@ public class WiFiDirectBroadcastReciever extends BroadcastReceiver {
                     v.vibrate(2000);
                 }
             }
-
-
 
         }else if(WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION.equals(action)){
             //do something

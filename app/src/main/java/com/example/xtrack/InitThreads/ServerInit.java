@@ -6,6 +6,7 @@ import android.net.wifi.p2p.WifiP2pDeviceList;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.util.Log;
 
 import com.example.xtrack.AsyncTasks.SendRecieve;
 import com.example.xtrack.trackingphase;
@@ -22,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 
 public class ServerInit extends Thread {
+    private static final String TAG = "ServerInit";
     Socket socket = null;
     ServerSocket serverSocket;
     public SendRecieve sendRecieve;
@@ -66,6 +68,11 @@ public class ServerInit extends Thread {
     @Override
     public void interrupt() {
         super.interrupt();
+        try {
+            serverSocket.close();
+        } catch (IOException ioException) {
+            ioException.printStackTrace();
+        }
     }
 
     public static ArrayList<InetAddress> getClients() {

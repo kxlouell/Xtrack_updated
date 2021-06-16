@@ -124,13 +124,6 @@ public class MainActivity extends AppCompatActivity implements HomeFragment.home
     WifiP2pManager mManager;
     WifiP2pManager.Channel mChannel;
 
-    BroadcastReceiver mReciever;
-    IntentFilter mIntentFilter;
-
-    List<WifiP2pDevice> peers = new ArrayList<WifiP2pDevice>();
-    String[] deviceNameArray;
-    WifiP2pDevice[] deviceArray;
-
     public static final int MESSAGE_READ = 1;
     public static final int mTOAST = 2;
 
@@ -255,6 +248,8 @@ public class MainActivity extends AppCompatActivity implements HomeFragment.home
         super.onResume();
 
     }
+
+
 
     @Override
     protected void onPause() {

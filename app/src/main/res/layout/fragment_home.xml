@@ -32,6 +32,45 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/include3"/>
 
+    <ImageButton
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/include3"
+        android:layout_marginTop="10dp"
+        android:layout_marginRight="20dp"
+        android:background="@drawable/buttonuser"
+        android:scaleType="fitXY"
+        android:id="@+id/user_home"
+        />
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toBottomOf="@id/user_home"
+        app:layout_constraintLeft_toLeftOf="@id/user_home"
+        app:layout_constraintRight_toRightOf="@id/user_home"
+        android:text="Name"
+        android:textSize="40px"
+        android:fontFamily="@font/rubik_bold"
+        android:textColor="@android:color/darker_gray"
+        android:id="@+id/user_name"/>
+
+    <com.github.angads25.toggle.widget.LabeledSwitch
+        android:id="@+id/Status_Switch"
+        android:layout_width="150dp"
+        android:layout_height="50dp"
+        android:layout_margin="16dp"
+        android:textSize="25dp"
+        app:textOn="Host"
+        app:textOff="Client"
+        app:colorOn="@color/orange"
+        app:colorOff="@color/coolgrey"
+        app:on="false"
+        app:colorBorder="@color/white"
+        app:layout_constraintTop_toBottomOf="@+id/button1"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        android:tooltipText="Choose whether to start a network of connect to a network"/>
     <TextView
         android:id="@+id/connectionStatus"
         android:layout_width="wrap_content"
@@ -47,10 +86,6 @@
         android:id="@+id/loadingButton"
         android:layout_width="200dp"
         android:layout_height="51dp"
-        android:layout_below="@+id/button1"
-        android:layout_alignParentStart="true"
-        android:layout_alignParentEnd="true"
-        android:layout_alignParentBottom="true"
         android:layout_marginTop="10dp"
         android:paddingLeft="10dp"
         android:paddingRight="10dp"
@@ -60,7 +95,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.497"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/button1"
+        app:layout_constraintTop_toBottomOf="@+id/Status_Switch"
         app:layout_constraintVertical_bias="0.055"
         app:lb_buttonColor="@color/orange"
         app:lb_isCircular="true"

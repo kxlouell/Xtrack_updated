@@ -55,6 +55,7 @@ public class ClientInit extends Thread {
                 this.run();
             }else{
                 trackingPhase.disconnect();
+                count=0;
             }
         }
     }
