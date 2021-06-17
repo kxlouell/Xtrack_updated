@@ -78,7 +78,7 @@ public class SendRecieve extends HandlerThread {
             dataInputStream = new DataInputStream(inputStream);
         } catch (IOException e) {
             e.printStackTrace();
-            trackingPhase.disconnect();
+            //trackingPhase.disconnect();
         }
         while (socket != null) {
             if (socket.isConnected()) {
@@ -119,7 +119,7 @@ public class SendRecieve extends HandlerThread {
 
                 } catch (IOException e) {
                     e.printStackTrace();
-                    trackingPhase.disconnect();
+                    //trackingPhase.disconnect();
                 }
             }
         }
@@ -139,7 +139,7 @@ public class SendRecieve extends HandlerThread {
             System.out.println(Thread.currentThread()+" "+"Data Sent!");
         } catch (IOException e) {
             e.printStackTrace();
-            trackingPhase.disconnect();
+            //trackingPhase.disconnect();
         }
     }
 
@@ -153,7 +153,7 @@ public class SendRecieve extends HandlerThread {
             System.out.println(Thread.currentThread()+" initAvatar Sent!");
         }catch (IOException e){
             e.printStackTrace();
-            trackingPhase.disconnect();
+            //trackingPhase.disconnect();
         }
 
     }

@@ -46,6 +46,7 @@ import com.example.xtrack.AsyncTasks.plotTaskServer;
 import com.example.xtrack.BroadCastReciever.WiFiDirectBroadcastReciever;
 import com.example.xtrack.InitThreads.ClientInit;
 import com.example.xtrack.InitThreads.ServerInit;
+import com.example.xtrack.P2pDiscovery.P2pDiscovery;
 import com.example.xtrack.Tools.ChangeDeviceName;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.mapbox.android.core.location.LocationEngine;
@@ -131,27 +132,20 @@ public class trackingphase extends AppCompatActivity implements
 
     ImageView btn_peersImageView;
     ImageButton btn;
-    ListView peersListView;
+    public static ListView peersListView;
     ImageView btn_notification;
     Style style;
 
     public TextView connectionStatus;
-    String[] deviceNameArray;
-    int[] image;
 
     MainActivity mActivity;
-    WifiP2pManager mManager;
-    WifiP2pManager.Channel mChannel;
-
-    WiFiDirectBroadcastReciever mReciever;
-    IntentFilter mIntentFilter;
-    ServerInit serverInit;
-    ClientInit clientInit;
+    public static ServerInit serverInit;
+    public static ClientInit clientInit;
     SendRecieve sendRecieve;
+    P2pDiscovery p2pDiscovery;
 
     double lastLat = 0, lastlon = 0;
-    List<WifiP2pDevice> peers = new ArrayList<WifiP2pDevice>();
-    WifiP2pDevice[] deviceArray;
+
 
     private static final String SOURCE_ID = "SOURCE_ID";
     private static final String ICON_ID = "ICON_ID";
@@ -164,49 +158,21 @@ public class trackingphase extends AppCompatActivity implements
     public static final int mTOAST = 2;
     public static final int PLOTLOCATION = 3;
 
-    private ConnectivityManager mCManager;
-    private ConnectivityManager.NetworkCallback mCallback;
     SharedPreferences sprefs;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        sprefs = this.getSharedPreferences(this.getString(R.string.AVATAR), trackingphase.MODE_PRIVATE);
-        STATUS = sprefs.getString("USERTYPE", null);
-        String devName = sprefs.getString("NAME", null) + " | " + STATUS;
         // Mapbox access token is configured here. This needs to be called either in your application
         // object or in the same activity which contains the mapview.
         Mapbox.getInstance(this, getString(R.string.access_token));
         // This contains the MapView in XML and needs to be called after the access token is configured.
-
         setContentView(R.layout.tracking_phase);
         initialWork(savedInstanceState);
         exqListener();
-        ChangeDeviceName changeDeviceName = new ChangeDeviceName(mManager, mChannel);
-        changeDeviceName.setDeviceName(devName);
-        if (STATUS == "Host") {
-            if (ActivityCompat.checkSelfPermission(trackingphase.this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                // TODO: Consider calling
-                //    ActivityCompat#requestPermissions
-                // here to request the missing permissions, and then overriding
-                //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-                //                                          int[] grantResults)
-                // to handle the case where the user grants the permission. See the documentation
-                // for ActivityCompat#requestPermissions for more details.
-                return;
-            }
-            mManager.createGroup(mChannel, new WifiP2pManager.ActionListener() {
-                @Override
-                public void onSuccess() {
-                    Toast.makeText(trackingphase.this, "Group Created! Client can now Connect!", Toast.LENGTH_SHORT).show();
-                }
+        p2pDiscovery = new P2pDiscovery(trackingphase.this);
+        p2pDiscovery.start();
 
-                @Override
-                public void onFailure(int reason) {
-
-                }
-            });
-        }
 
     }
 
@@ -264,20 +230,7 @@ public class trackingphase extends AppCompatActivity implements
         btn_peersImageView.setVisibility(View.VISIBLE);
         connectionStatus = (TextView) findViewById(R.id.connectionStatus);
         mActivity = new MainActivity();
-
-        mManager = (WifiP2pManager) getSystemService(Context.WIFI_P2P_SERVICE);
-        mChannel = mManager.initialize(this, getMainLooper(), null);
-        mReciever = new WiFiDirectBroadcastReciever(mManager, mChannel, this, mCManager, mCallback);
-
-//Intent Filters
-        mIntentFilter = new IntentFilter();
-        mIntentFilter.addAction(WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION);
-        mIntentFilter.addAction(WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION);
-        mIntentFilter.addAction(WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION);
-        mIntentFilter.addAction(WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION);
-
         peersListView = findViewById(R.id.peerList);
-
         centerLoc = (FloatingActionButton) findViewById(R.id.centerLoc);
     }
 
@@ -292,11 +245,13 @@ public class trackingphase extends AppCompatActivity implements
         btn_peersImageView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                discoverPeer();
+                System.out.println("P2pDiscovery is :"+p2pDiscovery);
+                System.out.println("Handler is :"+p2pDiscovery.handler);
+                p2pDiscovery.handler.obtainMessage(1);
             }
         });
 
-        peersListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+        /*peersListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 final WifiP2pDevice device = deviceArray[position];
@@ -382,7 +337,7 @@ public class trackingphase extends AppCompatActivity implements
                 }
             }
 
-        });
+        });*/
 
         centerLoc.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -404,50 +359,9 @@ public class trackingphase extends AppCompatActivity implements
         finish();
     }
 
-    public void discoverPeer(){
-        if (ContextCompat.checkSelfPermission(trackingphase.this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-        } else {
-            requestPermissions();
-        }
-        mManager.discoverPeers(mChannel, new WifiP2pManager.ActionListener() {
-            @Override
-            public void onSuccess() {
-                Toast.makeText(trackingphase.this, "Discover Started", Toast.LENGTH_SHORT).show();
-            }
-
-            @Override
-            public void onFailure(int reason) {
-                String failReason = "Unknown";
-                if (reason == 0) failReason = "Internal Error";
-                if (reason == 1) failReason = "P2P Unsupported";
-                if (reason == 2) failReason = "WiFi Direct Busy";
-                Toast.makeText(trackingphase.this, "Discovery Failed", Toast.LENGTH_SHORT).show();
-                Toast.makeText(trackingphase.this, "Error: " + failReason, Toast.LENGTH_SHORT).show();
-            }
-        });
 
 
-    }
-
-    public WifiP2pManager.ConnectionInfoListener connectionInfoListener = new WifiP2pManager.ConnectionInfoListener() {
-        @Override
-        public void onConnectionInfoAvailable(final WifiP2pInfo info) {
-            final InetAddress groupOwnerAddress = info.groupOwnerAddress;
-            if (info.groupFormed && info.isGroupOwner) {
-                connectionStatus.setText("Host");
-                serverInit = new ServerInit( trackingphase.this, handlerSockets, threadHandler);
-                serverInit.setName("HostSocketsThread");
-                //serverInit.start();
-            } else if (info.groupFormed) {
-                connectionStatus.setText("Client");
-                clientInit = new ClientInit(groupOwnerAddress,trackingphase.this,handlerSockets, threadHandler);
-                clientInit.setName("ClientSocketThread");
-                //clientInit.start();
-            }
-        }
-    };
-
-    public void disconnect() {
+    /*public void disconnect() {
         if (mManager != null && mChannel != null) {
             if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                 requestPermissions();
@@ -479,7 +393,7 @@ public class trackingphase extends AppCompatActivity implements
                 }
             });
         }
-    }
+    }*/
     //button
 
     @Override
@@ -720,14 +634,12 @@ public class trackingphase extends AppCompatActivity implements
     protected void onResume() {
         super.onResume();
         mapView.onResume();
-        registerReceiver(mReciever, mIntentFilter);
     }
 
     @Override
     protected void onPause() {
         super.onPause();
         mapView.onPause();
-        unregisterReceiver(mReciever);
     }
 
     @Override
@@ -745,7 +657,6 @@ public class trackingphase extends AppCompatActivity implements
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        disconnect();
         // Prevent leaks
         if (locationEngine != null) {
             locationEngine.removeLocationUpdates(callback);
@@ -754,35 +665,7 @@ public class trackingphase extends AppCompatActivity implements
         btn_peersImageView.setVisibility(View.INVISIBLE);
     }
 
-    public WifiP2pManager.PeerListListener peerListListener = new WifiP2pManager.PeerListListener() {
-        @Override
-        public void onPeersAvailable(WifiP2pDeviceList peerList) {
-            if (!peerList.getDeviceList().equals(peers)) {
-                peers.clear();
-                peers.addAll(peerList.getDeviceList());
 
-                deviceNameArray = new String[peerList.getDeviceList().size()];
-                deviceArray = new WifiP2pDevice[peerList.getDeviceList().size()];
-                image = new int[peerList.getDeviceList().size()];
-                int index = 0;
-
-                for (WifiP2pDevice device : peerList.getDeviceList()) {
-                    deviceNameArray[index] = device.deviceName;
-                    deviceArray[index] = device;
-                    image[index] = R.drawable.ic_unknown_user;
-                    index++;
-                }
-                peerListAdapter peerAdapter = new peerListAdapter(trackingphase.this,image, deviceNameArray);
-                peersListView.setAdapter(peerAdapter);
-
-
-                if (peers.size() == 0) {
-                    Toast.makeText(getApplicationContext(), "No Device Found", Toast.LENGTH_SHORT).show();
-                    return;
-                }
-            }
-        }
-    };
 
     @Override
     public void onLowMemory() {

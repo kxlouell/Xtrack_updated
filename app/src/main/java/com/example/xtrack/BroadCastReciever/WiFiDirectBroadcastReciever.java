@@ -11,28 +11,32 @@ import android.net.wifi.p2p.WifiP2pManager;
 import android.os.Build;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
+import android.util.Log;
 import android.widget.Toast;
 
 import androidx.core.app.ActivityCompat;
 
 import com.example.xtrack.MainActivity;
+import com.example.xtrack.P2pDiscovery.P2pDiscovery;
 import com.example.xtrack.trackingphase;
 
 public class WiFiDirectBroadcastReciever extends BroadcastReceiver {
 
     private WifiP2pManager mManager;
     private WifiP2pManager.Channel mChannel;
-    private trackingphase trackingPhase;
     private ConnectivityManager mCManager;
-    private ConnectivityManager.NetworkCallback mCallback;
+    private P2pDiscovery p2pDiscovery;
+    public static final String TAG = "WifiDirectBR";
+    private trackingphase tp;
 
-    public WiFiDirectBroadcastReciever(WifiP2pManager mManager, WifiP2pManager.Channel mChannel, trackingphase trackingPhase, ConnectivityManager mCManager, ConnectivityManager.NetworkCallback mCallback) {
+
+    public WiFiDirectBroadcastReciever(P2pDiscovery p2pDiscovery,trackingphase tp, WifiP2pManager mManager, WifiP2pManager.Channel mChannel, ConnectivityManager mCManager) {
         this.mManager = mManager;
         this.mChannel = mChannel;
-        this.trackingPhase = trackingPhase;
         this.mCManager = mCManager;
-        this.mCallback = mCallback;
-        System.out.println("Running BroadCast Reciever");
+        this.p2pDiscovery = p2pDiscovery;
+        this.tp = tp;
+        Log.d(TAG,"Running Broadcast Reciever");
     }
 
     @Override
@@ -51,13 +55,12 @@ public class WiFiDirectBroadcastReciever extends BroadcastReceiver {
             //do something
             if (mManager != null) {
                 if (ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                    trackingPhase.requestPermissions();
                     System.out.println("Permission Not Granted");
                 }else {
                     System.out.println("Permission Granted");
                 }
                 System.out.println("requesting peer");
-                mManager.requestPeers(mChannel, trackingPhase.peerListListener);
+                mManager.requestPeers(mChannel, p2pDiscovery.peerListListener);
             }
         }else if(WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION.equals(action)){
             //do something
@@ -67,8 +70,8 @@ public class WiFiDirectBroadcastReciever extends BroadcastReceiver {
             }
             NetworkInfo networkInfo = intent.getParcelableExtra(WifiP2pManager.EXTRA_NETWORK_INFO);
             if (networkInfo.isConnected()) {
-                mManager.requestConnectionInfo(mChannel, trackingPhase.connectionInfoListener);
-                Vibrator v = (Vibrator) trackingPhase.getSystemService(Context.VIBRATOR_SERVICE);
+                mManager.requestConnectionInfo(mChannel, p2pDiscovery.connectionInfoListener);
+                Vibrator v = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
 // Vibrate for 500 milliseconds
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     v.vibrate(VibrationEffect.createOneShot(2000, VibrationEffect.DEFAULT_AMPLITUDE ));
@@ -77,8 +80,13 @@ public class WiFiDirectBroadcastReciever extends BroadcastReceiver {
                     v.vibrate(2000);
                 }
             }else {
-                trackingPhase.connectionStatus.setText("Device Disconnected!");
-                Vibrator v = (Vibrator) trackingPhase.getSystemService(Context.VIBRATOR_SERVICE);
+                tp.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        tp.connectionStatus.setText("Device Disconnected!");
+                    }
+                });
+                Vibrator v = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
 // Vibrate for 500 milliseconds
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     v.vibrate(VibrationEffect.createOneShot(2000, VibrationEffect.DEFAULT_AMPLITUDE));

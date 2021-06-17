@@ -27,7 +27,6 @@ public class ServerInit extends Thread {
     Socket socket = null;
     ServerSocket serverSocket;
     public SendRecieve sendRecieve;
-    trackingphase trackingphase;
     Handler threadHandler;
     WifiP2pDeviceList devices;
     List<SendRecieve> devicesSR;
@@ -36,7 +35,6 @@ public class ServerInit extends Thread {
     public ServerInit(trackingphase trackingPhase, Handler handler, Handler threadHandler){
         devicesSR = new ArrayList<SendRecieve>();
         devices = new WifiP2pDeviceList();
-        this.trackingphase = trackingPhase;
         this.threadHandler = threadHandler;
         clients = new ArrayList<InetAddress>();
     }
@@ -52,7 +50,7 @@ public class ServerInit extends Thread {
             serverSocket.bind(new InetSocketAddress(8888));
             while(true) {
                 socket = serverSocket.accept();
-                sendRecieve = new SendRecieve(socket, trackingphase, threadHandler);
+                //sendRecieve = new SendRecieve(socket, trackingphase, threadHandler);
                 sendRecieve.setName("SRThread as Server: "+socket.getInetAddress());
                 sendRecieve.start();
                 devicesSR.add(sendRecieve);
