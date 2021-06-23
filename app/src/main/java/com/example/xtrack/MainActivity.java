@@ -2,6 +2,7 @@ package com.example.xtrack;
 
 
 import android.os.Bundle;
+import android.os.StrictMode;
 import android.util.Log;
 
 

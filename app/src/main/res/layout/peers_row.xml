@@ -6,12 +6,12 @@
 
     <ImageView
         android:id="@+id/peerImage"
-        android:layout_width="180px"
-        android:layout_height="180px"
+        android:layout_width="80dp"
+        android:layout_height="80dp"
         android:src="@drawable/ic_unknown_user"/>
     <TextView
         android:id="@+id/peerText"
-        android:layout_width="wrap_content"
+        android:layout_width="80dp"
         android:layout_height="wrap_content"
         android:text="GG"
         android:fontFamily="@font/rubik_bold"

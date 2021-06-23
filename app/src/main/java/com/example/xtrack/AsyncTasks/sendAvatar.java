@@ -29,7 +29,7 @@ public class sendAvatar extends AsyncTask<Void,Void,Void> {
 
     @Override
     protected Void doInBackground(Void... voids) {
-        sendRecieve.initAvatar(avatar);
+        //sendRecieve.initAvatar(avatar);
         return null;
     }
 }

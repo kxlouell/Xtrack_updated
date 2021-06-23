@@ -6,25 +6,21 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.BitmapFactory;
 import android.location.Location;
-import android.net.ConnectivityManager;
 import android.net.wifi.WpsInfo;
 import android.net.wifi.p2p.WifiP2pConfig;
 import android.net.wifi.p2p.WifiP2pDevice;
-import android.net.wifi.p2p.WifiP2pDeviceList;
-import android.net.wifi.p2p.WifiP2pGroup;
-import android.net.wifi.p2p.WifiP2pInfo;
-import android.net.wifi.p2p.WifiP2pManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
+import android.os.StrictMode;
 import android.util.Log;
 import android.view.View;
+import android.view.animation.AnimationUtils;
 import android.widget.AdapterView;
 import android.widget.ImageButton;
 import android.widget.ImageView;
@@ -33,21 +29,21 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
+import androidx.core.view.GravityCompat;
+import androidx.drawerlayout.widget.DrawerLayout;
 
-import com.example.xtrack.Adapters.peerListAdapter;
+import com.example.xtrack.Adapters.ConnectedDevice;
+import com.example.xtrack.Adapters.connectedDeviceAdapter;
+import com.example.xtrack.AsyncTasks.SendLocation;
 import com.example.xtrack.AsyncTasks.SendRecieve;
 import com.example.xtrack.AsyncTasks.plotTaskClient;
 import com.example.xtrack.AsyncTasks.plotTaskServer;
-import com.example.xtrack.BroadCastReciever.WiFiDirectBroadcastReciever;
 import com.example.xtrack.InitThreads.ClientInit;
 import com.example.xtrack.InitThreads.ServerInit;
 import com.example.xtrack.P2pDiscovery.P2pDiscovery;
-import com.example.xtrack.Tools.ChangeDeviceName;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.mapbox.android.core.location.LocationEngine;
 import com.mapbox.android.core.location.LocationEngineCallback;
@@ -56,8 +52,6 @@ import com.mapbox.android.core.location.LocationEngineRequest;
 import com.mapbox.android.core.location.LocationEngineResult;
 import com.mapbox.android.core.permissions.PermissionsListener;
 import com.mapbox.android.core.permissions.PermissionsManager;
-import com.mapbox.geojson.Feature;
-import com.mapbox.geojson.Point;
 import com.mapbox.mapboxsdk.Mapbox;
 import com.mapbox.mapboxsdk.camera.CameraPosition;
 import com.mapbox.mapboxsdk.geometry.LatLng;
@@ -70,34 +64,22 @@ import com.mapbox.mapboxsdk.maps.MapboxMap;
 import com.mapbox.mapboxsdk.maps.OnMapReadyCallback;
 import com.mapbox.mapboxsdk.maps.Style;
 
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
 import java.lang.ref.WeakReference;
-import java.net.InetAddress;
-import java.net.NetworkInterface;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.SocketException;
-import java.time.chrono.IsoChronology;
 import java.util.ArrayList;
-import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.example.xtrack.AsyncTasks.sendTask;
 import com.mapbox.mapboxsdk.plugins.annotation.Symbol;
 import com.mapbox.mapboxsdk.plugins.annotation.SymbolManager;
 import com.mapbox.mapboxsdk.plugins.annotation.SymbolOptions;
-import com.mapbox.mapboxsdk.style.layers.Layer;
 import com.mapbox.mapboxsdk.style.layers.SymbolLayer;
 import com.mapbox.mapboxsdk.style.sources.GeoJsonSource;
-import com.mapbox.mapboxsdk.utils.BitmapUtils;
 
 import org.jetbrains.annotations.NotNull;
 
-import static com.mapbox.mapboxsdk.style.layers.Property.NONE;
 import static com.mapbox.mapboxsdk.style.layers.Property.VISIBLE;
 import static com.mapbox.mapboxsdk.style.layers.PropertyFactory.iconAllowOverlap;
 import static com.mapbox.mapboxsdk.style.layers.PropertyFactory.iconIgnorePlacement;
@@ -112,13 +94,18 @@ public class trackingphase extends AppCompatActivity implements
         OnMapReadyCallback, PermissionsListener {
 
     private int FINE_LOCATION_PERMISION_CODE = 1;
-    public String STATUS;
+    public static final int START_SERVER = 0;
+    public static final int START_CLIENT = 1;
+    public static final int START_SEND_LOC = 2;
+    public String STATUS, USER;;
+    public int USER_ICON;
     public int FIRST_RUN = 0;
     private static final String NEW_LAYER_ID = "NEW_LAYER_ID";
     double trying = -86.78160;
     private ServerSocket dumySskt;
     private Socket dumySkt;
     private static final String TAG = "Tracking Phase";
+    public boolean IS_AVATAR_INIT = false;
 
     private static final long DEFAULT_INTERVAL_IN_MILLISECONDS = 1000L;
     private static final long DEFAULT_MAX_WAIT_TIME = DEFAULT_INTERVAL_IN_MILLISECONDS * 5;
@@ -130,21 +117,19 @@ public class trackingphase extends AppCompatActivity implements
             new LocationChangeListeningActivityLocationCallback(this);
     LocationComponent locationComponent;
 
-    ImageView btn_peersImageView;
+    ImageView btn_peersImageView, btn_notification, btn_previous, userICON;
     ImageButton btn;
     public static ListView peersListView;
-    ImageView btn_notification;
+    public ListView connectedDevList;
     Style style;
 
-    public TextView connectionStatus;
+    public TextView connectionStatus, usernameTV,userStatusTV, connectedPeers;
 
     MainActivity mActivity;
     public static ServerInit serverInit;
     public static ClientInit clientInit;
-    SendRecieve sendRecieve;
+    public SendLocation sendLocation;
     P2pDiscovery p2pDiscovery;
-
-    double lastLat = 0, lastlon = 0;
 
 
     private static final String SOURCE_ID = "SOURCE_ID";
@@ -154,15 +139,31 @@ public class trackingphase extends AppCompatActivity implements
     SymbolManager symbolManager;
     Map<String, Symbol> symbolIP = new HashMap<>();
 
+    public ArrayList<ConnectedDevice> connectedDeviceArrayList;
+    public connectedDeviceAdapter connectedDeviceAdapter;
+
     public static final int INITAVATAR = 1;
     public static final int mTOAST = 2;
     public static final int PLOTLOCATION = 3;
 
     SharedPreferences sprefs;
+    Context context;
+
+    DrawerLayout drawerLayout;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        if (android.os.Build.VERSION.SDK_INT > 9)
+        {
+            StrictMode.ThreadPolicy policy = new
+                    StrictMode.ThreadPolicy.Builder().permitAll().build();
+            StrictMode.setThreadPolicy(policy);
+        }
+        sprefs = getSharedPreferences(getString(R.string.AVATAR), trackingphase.MODE_PRIVATE);
+        STATUS = sprefs.getString("USERTYPE", null);
+        USER = sprefs.getString("NAME", null);
+        USER_ICON = sprefs.getInt("ICON", 0);
         // Mapbox access token is configured here. This needs to be called either in your application
         // object or in the same activity which contains the mapview.
         Mapbox.getInstance(this, getString(R.string.access_token));
@@ -170,20 +171,25 @@ public class trackingphase extends AppCompatActivity implements
         setContentView(R.layout.tracking_phase);
         initialWork(savedInstanceState);
         exqListener();
+        Log.d(TAG,"Oncreate sendlocation ");
         p2pDiscovery = new P2pDiscovery(trackingphase.this);
         p2pDiscovery.start();
-
-
+        while (p2pDiscovery.handler == null){
+            Log.d(TAG," Waiting");
+        }
+        p2pDiscovery.handler.obtainMessage(p2pDiscovery.INITWORK).sendToTarget();
+        p2pDiscovery.handler.obtainMessage(p2pDiscovery.SETDEVICENAME).sendToTarget();
     }
 
-    Handler threadHandler = new Handler(Looper.getMainLooper()) {
+    public Handler threadHandler = new Handler(Looper.getMainLooper()) {
         @Override
         public void handleMessage(@NonNull Message msg) {
             switch (msg.what) {
                 case INITAVATAR:
-                    System.out.println("Handler Case AvatarInit");
+                    Log.d(TAG,"Handler Case AvatarInit");
                     Bundle bb = (Bundle) msg.obj;
-                    System.out.println("threadHandler: " + bb);
+                    Log.d(TAG,"threadHandler: " + bb);
+                    String devName = bb.getString("Name");
                     style.addImage(bb.getString("Inet"), BitmapFactory.decodeResource(
                             trackingphase.this.getResources(), bb.getInt("Avatar")));
                     SymbolOptions symbolOptions = new SymbolOptions()
@@ -191,31 +197,72 @@ public class trackingphase extends AppCompatActivity implements
                             .withIconImage(bb.getString("Inet"))
                             .withIconSize(0.1f)
                             .withSymbolSortKey(2f)
-                            .withDraggable(false)
-                            .withTextAnchor("Dowps");
+                            .withDraggable(false);
                     symbolIP.put(bb.getString("Inet"), symbolManager.create(symbolOptions));
-                    System.out.println("threadHandler: " + symbolIP);
+                    Log.d(TAG,"threadHandler: " + symbolIP);
                     break;
                 case mTOAST:
                     Toast.makeText(trackingphase.this, msg.obj.toString(), Toast.LENGTH_SHORT).show();
                     break;
                 case PLOTLOCATION:
                     Bundle locationBundle = (Bundle) msg.obj;
-                    if (STATUS == "Host") {
-                        plotTaskServer ptaskServer = new plotTaskServer(trackingphase.this, serverInit.getDevicesSR(), locationBundle, symbolIP, symbolManager);
+                    if (STATUS.equals("Host")) {
+                        Log.d(TAG, " Plotting Loc as Host");
+                        plotTaskServer ptaskServer = new plotTaskServer(trackingphase.this, serverInit.devicesSR, locationBundle, symbolIP, symbolManager);
                         ptaskServer.execute();
-                    } else if (STATUS == "Client") {
+                    } else if (STATUS.equals("Client")) {
+                        Log.d(TAG, "Plotting Loc as Client");
                         plotTaskClient plotTaskClient = new plotTaskClient(trackingphase.this, clientInit.sendRecieve, locationBundle, symbolIP, symbolManager);
                         plotTaskClient.execute();
                     }
                     break;
+
+
             }
         }
     };
 
-    Handler handlerSockets = new Handler(Looper.getMainLooper()) {
+    public Handler handlerSockets = new Handler(Looper.getMainLooper()) {
         @Override
         public void handleMessage(@NonNull Message msg) {
+            Log.d(TAG," New What "+msg.what);
+            switch (msg.what) {
+                case START_SERVER:
+                    serverInit = new ServerInit(trackingphase.this);
+                    serverInit.start();
+                    while (serverInit.serverHandler == null){
+                        Log.d(TAG," Waiting");
+                    }
+                    serverInit.serverHandler.obtainMessage(serverInit.EXECUTE_TASK).sendToTarget();
+                    Log.d(TAG, "Server Running!");
+                    break;
+                case START_CLIENT:
+                    clientInit = new ClientInit(p2pDiscovery.getGroupOwnerAddress(), trackingphase.this);
+                    clientInit.start();
+                    while (clientInit.clientHandler == null){
+                        Log.d(TAG," Waiting for clientHandler");
+                    }
+                    clientInit.clientHandler.obtainMessage(clientInit.EXECUTE_TASK).sendToTarget();
+                    Log.d(TAG, "CLient Running!");
+                    while (clientInit.sendRecieve==null){
+                        Log.d(TAG, " Waiting for clientSendRecive");
+                    }
+                    while (clientInit.sendRecieve.handler==null){
+                        Log.d(TAG, " Waiting for client SendRecive Handler");
+                    }
+                    clientInit.sendRecieve.handler.obtainMessage(clientInit.sendRecieve.SEND_IP).sendToTarget();
+                    break;
+                case START_SEND_LOC:
+                    Log.d(TAG,"Starting SendLocation");
+                    if(sendLocation.isAlive()){
+                        Log.d(TAG, " SendLocation already alive");
+                    }else {
+                        Log.d(TAG, " SendLocation is Starting");
+                        sendLocation.start();
+                    }
+                    break;
+
+            }
 
         }
     };
@@ -232,6 +279,21 @@ public class trackingphase extends AppCompatActivity implements
         mActivity = new MainActivity();
         peersListView = findViewById(R.id.peerList);
         centerLoc = (FloatingActionButton) findViewById(R.id.centerLoc);
+        drawerLayout = (DrawerLayout) findViewById(R.id.drawer_layout);
+        btn_previous = (ImageView) findViewById(R.id.tp_previous);
+        userICON = findViewById(R.id.user_tp);
+        usernameTV = findViewById(R.id.tp_user_name);
+        userStatusTV = findViewById(R.id.tp_STATUS);
+        connectedDevList = findViewById(R.id.connectedDevList);
+
+        //Setting up USERS
+        userICON.setImageResource(USER_ICON);
+        usernameTV.setText(USER);
+        userStatusTV.setText(STATUS);
+        connectedPeers = findViewById(R.id.connectedPeers);
+        connectedDeviceArrayList = new ArrayList<>();
+        connectedDeviceAdapter = new connectedDeviceAdapter(this,R.layout.connected_device_rows,connectedDeviceArrayList);
+        sendLocation = new SendLocation(trackingphase.this);
     }
 
     public void exqListener() {
@@ -245,22 +307,67 @@ public class trackingphase extends AppCompatActivity implements
         btn_peersImageView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                System.out.println("P2pDiscovery is :"+p2pDiscovery);
-                System.out.println("Handler is :"+p2pDiscovery.handler);
-                p2pDiscovery.handler.obtainMessage(1);
+                v.startAnimation(AnimationUtils.loadAnimation(trackingphase.this, R.anim.click_anim));
+                Log.d(TAG,"P2pDiscovery is :"+p2pDiscovery);
+                Log.d(TAG,"Handler is :"+p2pDiscovery.handler);
+                p2pDiscovery.handler.obtainMessage(p2pDiscovery.DISCOVER).sendToTarget();
             }
         });
 
-        /*peersListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+        drawerLayout.addDrawerListener(new DrawerLayout.DrawerListener() {
+            @Override
+            public void onDrawerSlide(@NonNull @NotNull View drawerView, float slideOffset) {
+
+            }
+
+            @Override
+            public void onDrawerOpened(@NonNull @NotNull View drawerView) {
+
+            }
+
+            @Override
+            public void onDrawerClosed(@NonNull @NotNull View drawerView) {
+                drawerLayout.setVisibility(View.GONE);
+            }
+
+            @Override
+            public void onDrawerStateChanged(int newState) {
+
+            }
+        });
+
+        btn_notification.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Toast.makeText(trackingphase.this, "Clicked Notification!", Toast.LENGTH_SHORT).show();
+                drawerLayout.setVisibility(View.VISIBLE);
+                v.startAnimation(AnimationUtils.loadAnimation(trackingphase.this, R.anim.click_anim));
+                drawerLayout.openDrawer(GravityCompat.END);
+            }
+        });
+
+        btn_previous.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                v.startAnimation(AnimationUtils.loadAnimation(trackingphase.this, R.anim.click_anim));
+                if(drawerLayout.isDrawerOpen(GravityCompat.END)){
+                    drawerLayout.closeDrawer(GravityCompat.END);
+                    drawerLayout.setVisibility(View.GONE);
+                }
+            }
+        });
+
+        peersListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                WifiP2pDevice[] deviceArray = p2pDiscovery.getDeviceArray();
                 final WifiP2pDevice device = deviceArray[position];
-                System.out.println("Device Name is " + device.deviceName.contains("Client"));
-                System.out.println("Status is "+STATUS);
+                Log.d(TAG,"Device Name is " + device.deviceName.contains("Client"));
+                Log.d(TAG,"Status is "+STATUS);
                 WifiP2pConfig config = new WifiP2pConfig();
                 config.deviceAddress = device.deviceAddress;
                 config.wps.setup = WpsInfo.PBC;
-                config.groupOwnerIntent = WifiP2pConfig.GROUP_OWNER_INTENT_MIN;
+                config.groupOwnerIntent = 0;
 
                 if (STATUS.equals("Client") && device.deviceName.contains("Client")) {
                     new AlertDialog.Builder(trackingphase.this)
@@ -299,45 +406,22 @@ public class trackingphase extends AppCompatActivity implements
                     if (ActivityCompat.checkSelfPermission(trackingphase.this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                         requestPermissions();
                     } else {
-                        System.out.println("Access Fine Location Permitted!");
+                        Log.d(TAG,"Access Fine Location Permitted!");
+                        Bundle bb = new Bundle();
+                        p2pDiscovery.handler.post(new Runnable() {
+                            @Override
+                            public void run() {
+                            p2pDiscovery.connectPeer(config, device);
+                            }
+                        });
+
                     }
-                    mManager.connect(mChannel, config, new WifiP2pManager.ActionListener() {
-                        @Override
-                        public void onSuccess() {
-                            Toast.makeText(getApplicationContext(), "Connecting to" + device.deviceName, Toast.LENGTH_SHORT).show();
-                            mManager.clearLocalServices(mChannel, new WifiP2pManager.ActionListener() {
-                                @Override
-                                public void onSuccess() {
-                                    Toast.makeText(trackingphase.this, "Local Services Cleared!", Toast.LENGTH_SHORT).show();
-                                }
 
-                                @Override
-                                public void onFailure(int reason) {
-                                    switch (reason) {
-                                        case WifiP2pManager.P2P_UNSUPPORTED:
-                                            Toast.makeText(trackingphase.this, "Local Services Clear Failed: P2p Unsuported", Toast.LENGTH_SHORT).show();
-                                            break;
-                                        case WifiP2pManager.BUSY:
-                                            Toast.makeText(trackingphase.this, "Local Services Clear Failed: BUSY", Toast.LENGTH_SHORT).show();
-                                            break;
-                                        case WifiP2pManager.ERROR:
-                                            Toast.makeText(trackingphase.this, "Local Services Clear Failed: Enternal Error", Toast.LENGTH_SHORT).show();
-                                            break;
-                                    }
-                                }
-                            });
-                        }
-
-                        @Override
-                        public void onFailure(int reason) {
-                            Toast.makeText(getApplicationContext(), "Cant connect to " + device.deviceName, Toast.LENGTH_SHORT).show();
-                            Toast.makeText(getApplicationContext(), "Error Code: " + reason, Toast.LENGTH_SHORT).show();
-                        }
-                    });
                 }
             }
 
-        });*/
+        });
+
 
         centerLoc.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -348,6 +432,9 @@ public class trackingphase extends AppCompatActivity implements
                         .target(new LatLng(lat, lon))
                         .zoom(18).build();
                 mapboxMap.setCameraPosition(cameraPosition);
+                if(STATUS.equals("Client")){
+                    Toast.makeText(trackingphase.this, "ClienInit is alive: " +clientInit.isAlive()+"| ClientHandler is: "+clientInit.clientHandler.toString(), Toast.LENGTH_SHORT).show();
+                }
             }
         });
     }
@@ -359,41 +446,6 @@ public class trackingphase extends AppCompatActivity implements
         finish();
     }
 
-
-
-    /*public void disconnect() {
-        if (mManager != null && mChannel != null) {
-            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                requestPermissions();
-                return;
-            }
-            mManager.requestGroupInfo(mChannel, new WifiP2pManager.GroupInfoListener() {
-                @Override
-                public void onGroupInfoAvailable(WifiP2pGroup group) {
-                    if (group != null && mManager != null && mChannel != null) {
-                        mManager.removeGroup(mChannel, new WifiP2pManager.ActionListener() {
-
-                            @Override
-                            public void onSuccess() {
-                                Toast.makeText(getApplicationContext(),"Group Disconnect Success!", Toast.LENGTH_LONG).show();
-                                Log.d(TAG, "Disconnected");
-                                if(STATUS=="Host"){
-                                    serverInit.interrupt();
-                                }else if(STATUS=="Client"){
-                                    clientInit.interrupt();
-                                }
-                            }
-
-                            @Override
-                            public void onFailure(int reason) {
-                                Toast.makeText(getApplicationContext(),"Group Disconnected Failed!", Toast.LENGTH_LONG).show();
-                            }
-                        });
-                    }
-                }
-            });
-        }
-    }*/
     //button
 
     @Override
@@ -470,7 +522,6 @@ public class trackingphase extends AppCompatActivity implements
     private void initLocationEngine() {
         locationEngine = LocationEngineProvider.getBestLocationEngine(this);
 
-
         LocationEngineRequest request = new LocationEngineRequest.Builder(DEFAULT_INTERVAL_IN_MILLISECONDS)
                 .setPriority(LocationEngineRequest.PRIORITY_HIGH_ACCURACY)
                 .setMaxWaitTime(DEFAULT_MAX_WAIT_TIME).build();
@@ -506,6 +557,7 @@ public class trackingphase extends AppCompatActivity implements
     }
 
 
+
     private static class LocationChangeListeningActivityLocationCallback
             implements LocationEngineCallback<LocationEngineResult> {
 
@@ -538,73 +590,16 @@ public class trackingphase extends AppCompatActivity implements
                 // Pass the new location to the Maps SDK's LocationComponent
                 if (activity.mapboxMap != null && result.getLastLocation() != null) {
                     activity.mapboxMap.getLocationComponent().forceLocationUpdate(result.getLastLocation());
-                    double lastlat = trackingPhase.lastLat;
-                    double lastlon = trackingPhase.lastlon;
-                    double newlat = 0;
-                    double newlon = 0;
-                    if(lastlat>result.getLastLocation().getLatitude()){
-                        newlat = trackingPhase.lastLat - result.getLastLocation().getLatitude();
-                    }else{
-                        newlat = result.getLastLocation().getLatitude()-trackingPhase.lastLat;
-                    }
-                    if(lastlon>result.getLastLocation().getLongitude()){
-                        newlon = trackingPhase.lastlon - result.getLastLocation().getLongitude();
-                    }else{
-                        newlon = result.getLastLocation().getLongitude()-trackingPhase.lastlon;
+                    Bundle bb = new Bundle();
+                    bb.putDouble("lat", result.getLastLocation().getLatitude());
+                    bb.putDouble("lon", result.getLastLocation().getLongitude());
+                    if(trackingPhase.sendLocation.isAlive()){
+                        Log.d(TAG,"Send Loc Que to Handler");
+                        trackingPhase.sendLocation.handler.obtainMessage(trackingPhase.sendLocation.SEND_LOCATION, bb).sendToTarget();
                     }
 
-                    System.out.println(Thread.currentThread()+"Range "+newlat+" "+newlon);
-                    /*
-                    if (Math.abs(newlat) >=  0.000001||Math.abs(newlon) >= 0.000001) {
-                        if (trackingPhase.serverInit != null && trackingPhase.serverInit.getDevicesSR().size() > 0 && trackingPhase.STATUS == "Host") {
-                            System.out.println(Thread.currentThread() + " SendingLoc as Server!\n\n\n" + trackingPhase.FIRST_RUN);
-                            Bundle bb = new Bundle();
-                            bb.putDouble("lat", result.getLastLocation().getLatitude());
-                            bb.putDouble("lon", result.getLastLocation().getLongitude());
-                            System.out.println(Thread.currentThread() + " First Run is" + trackingPhase.FIRST_RUN);
-                            int count = 0;
-                            System.out.println("DevicesSR size: " + trackingPhase.serverInit.getDevicesSR().size());
-                            for (SendRecieve sr : trackingPhase.serverInit.getDevicesSR()) {
-                                if (trackingPhase.FIRST_RUN == 0) {
-                                    int icon = trackingPhase.sprefs.getInt("ICON", 0);
-                                    System.out.println(Thread.currentThread() + " ICON ID is " + trackingPhase.sprefs.getInt("ICON", 0));
-                                    if (icon != 0) {
-                                        sr.getHandler().obtainMessage(0, trackingPhase.sprefs.getInt("ICON", 0)).sendToTarget();
-                                        System.out.println(Thread.currentThread() + " TrackingPhase " + trackingPhase.FIRST_RUN);
-                                    }
-                                    trackingPhase.FIRST_RUN = 1;
-                                } else {
-                                    sr.getHandler().obtainMessage(1, bb).sendToTarget();
-                                    System.out.println(Thread.currentThread() + " Sending Location!");
-                                }
-                                count++;
-                            }
-                            System.out.println("Count is" + count);
-                        } else if (trackingPhase.clientInit != null && trackingPhase.clientInit.getSocket().isConnected() && trackingPhase.STATUS == "Client") {
-                            System.out.println("SendingLoc as Client!\n\n\n");
-                            Bundle bb = new Bundle();
-                            bb.putDouble("lat", result.getLastLocation().getLatitude());
-                            bb.putDouble("lon", result.getLastLocation().getLongitude());
-                            System.out.println("First Run is" + trackingPhase.FIRST_RUN);
-                            if (trackingPhase.FIRST_RUN == 0) {
-                                SharedPreferences sprefs = trackingPhase.getSharedPreferences(trackingPhase.getString(R.string.AVATAR), trackingphase.MODE_PRIVATE);
-                                int icon = sprefs.getInt("ICON", 0);
-                                System.out.println("ICON ID is " + sprefs.getInt("ICON", 0));
-                                if (icon != 0) {
-                                    trackingPhase.clientInit.sendRecieve.getHandler().obtainMessage(0, sprefs.getInt("ICON", 0)).sendToTarget();
-                                    System.out.println("TrackingPhase " + trackingPhase.FIRST_RUN);
-                                } else {
-                                    System.out.println("Icon is null");
-                                }
-                                trackingPhase.FIRST_RUN = 1;
-                            } else {
-                                trackingPhase.clientInit.sendRecieve.getHandler().obtainMessage(1, bb).sendToTarget();
-                                System.out.println(Thread.currentThread() + " Sending Location!");
-                            }
-                        }
-                    }*/
-                    trackingPhase.lastLat = result.getLastLocation().getLatitude();
-                    trackingPhase.lastlon = result.getLastLocation().getLongitude();
+
+
                 }
                 }
             }
@@ -644,8 +639,22 @@ public class trackingphase extends AppCompatActivity implements
 
     @Override
     protected void onStop() {
+        p2pDiscovery.quit();
         super.onStop();
         mapView.onStop();
+        if(p2pDiscovery.isAlive()){
+            if(STATUS.equals("Host")){
+                serverInit.sendRecieve.quit();
+                serverInit.quit();
+            }else if(STATUS.equals("Client")){
+                clientInit.quit();
+                clientInit.sendRecieve.quit();
+            }
+            p2pDiscovery.quit();
+            p2pDiscovery = null;
+            Log.d(TAG, "P2pDiscovery is dead!"+p2pDiscovery);
+        }
+
     }
 
     @Override
@@ -657,6 +666,23 @@ public class trackingphase extends AppCompatActivity implements
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        sendLocation.interrupt();
+
+        if(p2pDiscovery.isAlive()){
+            if(STATUS.equals("Host")){
+                serverInit.sendRecieve.quit();
+                serverInit.quit();
+            }else if(STATUS.equals("Client")){
+                clientInit.quit();
+                clientInit.sendRecieve.quit();
+            }
+            p2pDiscovery.quit();
+            p2pDiscovery = null;
+            Log.d(TAG, "P2pDiscovery is dead!"+p2pDiscovery);
+        }else {
+            Log.d(TAG, "P2pDiscovery is already dead!" + p2pDiscovery);
+        }
+        sendLocation.quit();
         // Prevent leaks
         if (locationEngine != null) {
             locationEngine.removeLocationUpdates(callback);

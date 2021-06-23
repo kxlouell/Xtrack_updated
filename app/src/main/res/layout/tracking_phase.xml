@@ -4,9 +4,9 @@
     android:layout_height="match_parent"
     xmlns:mapbox="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:background="@color/black"
     tools:context=".MainActivity">
-
 
     <com.mapbox.mapboxsdk.maps.MapView
         android:id="@+id/mapView"
@@ -55,7 +55,7 @@
         mapbox:layout_constraintStart_toStartOf="parent" />
     <ListView
         android:id="@+id/peerList"
-        android:layout_width="wrap_content"
+        android:layout_width="80dp"
         android:layout_height="wrap_content"
         mapbox:layout_constraintTop_toBottomOf="@+id/include_trackingactionbar"
         mapbox:layout_constraintLeft_toLeftOf="parent"
@@ -72,5 +72,43 @@
         android:src="@drawable/ic_target"
         android:layout_marginBottom="20dp"
         android:layout_marginRight="20dp"/>
+    <androidx.drawerlayout.widget.DrawerLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:id="@+id/drawer_layout"
+        android:visibility="gone"
+        >
 
+    <LinearLayout
+        android:id="@+id/nav_view"
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_gravity="end"
+        app:headerLayout="@layout/nav_head"
+        app:menu="@layout/connected_device"
+        android:background="@color/black">
+
+        <include
+            layout="@layout/nav_head"/>
+        <TextView
+            android:id="@+id/connectedPeers"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="18sp"
+            android:text="Connected Clients"
+            android:fontFamily="@font/rubik_bold"
+            android:textColor="@color/orange"
+            android:layout_gravity="center"
+            />
+        <ListView
+            android:id="@+id/connectedDevList"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@color/orange"/>
+    </LinearLayout>
+    </androidx.drawerlayout.widget.DrawerLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>
+
+
+
